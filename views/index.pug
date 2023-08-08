@@ -1,0 +1,58 @@
+extends layout
+block content
+  div#chat-container
+    div#chat-messages
+      each chat in chatsbubbles
+        if !chat 
+          div
+        if chat.name === "You"
+          div.user-bubble
+            p.message-name #{chat.name}:
+            p.messge-time #{chat.time}
+            p.message-text #{chat.message}
+        else 
+          div.chat-bubble
+            p.message-name #{chat.name}:
+            p.message-time #{chat.time}
+            p.message-text #{chat.message}
+    form#chat-text-input-container(action="/", method="post") 
+      textarea(name="chat", rows="5", id="chat-textinput" ) 
+      button#submit-message(type="submit") submit
+      //- img(src="https://1.bp.blogspot.com/-rxzEVBJY8fs/Xl5hb9DsTaI/AAAAAAAAces/EG8_zx8lduAD28uUiecS7jGMJSvRG5O1gCLcBGAsYHQ/s1600/13.jpg", alt="", id='send-message-icon')
+
+  script(src="/javascripts/handleEnterKey.js")
+
+block sidebar 
+  div#sidebar
+    h2 Chats
+    ul.sidebar-chat-group
+      li 
+        p group 1
+      li 
+        p group 2
+      li 
+        p group 3
+      li 
+        p group 4
+
+    h2 Contacts
+    ul.sidebar-chat-group 
+      li 
+        p group 1
+      li 
+        p group 2
+      li 
+        p group 3
+      li 
+        p group 4
+
+    h2 Groups
+    ul.sidebar-chat-group 
+      li 
+        p group 1
+      li 
+        p group 2
+      li 
+        p group 3
+      li 
+        p group 4

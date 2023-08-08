@@ -1,0 +1,107 @@
+body {
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  background-color: #2b2a33;
+  color: white;
+  margin: 0;
+  padding: 50px 0;
+}
+
+
+a {
+  color: #00B7FF;
+}
+
+#root{
+  display: grid;
+  grid-template-columns: minmax(12rem, 15rem)  auto;
+  min-width: 90vw;
+  margin: auto 1rem;
+  max-height: 65vh;
+}
+
+#chat-container{
+  display:grid;
+  border: solid 3rem rgba(0, 0, 0, 0.24);
+}
+
+#chat-messages{
+  display: grid;
+  grid-area: "recieved" "user" ;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+
+.chat-bubble, .user-bubble{
+  margin: 0;
+  padding: 0;
+  width: max-content;
+  height: fit-content;
+  border: solid #1f3138 1px;
+  margin: 1rem 0;
+  background-color:#b8cbd3;
+  color: black;
+  border-radius: 10px 30px 10px 30px;
+}
+
+.message-name, .message-text, .user-bubble>p{
+  margin: 0 1rem;
+  padding: .5rem;
+}
+
+.message-time, .user-bubble>:nth-child(2){
+  margin: 0 1rem;
+  padding: 0 .5rem;
+  font-size: 12px;
+  margin-top: -10px;
+}
+
+.message-name, .user-bubble>:nth-child(1){
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.message-text, .user-bubble>:nth-child(3){
+  font-size: 20px;
+  padding: 1rem;
+}
+
+.user-bubble{
+  margin-left: 80%;
+  border-radius: 30px 10px 30px 10px;
+  background-color: #b8d3b9;
+}
+
+#sidebar{
+  margin: 0;
+  border-left: 3rem solid rgba(0, 0, 0, 0.24);;
+  border-top: 3rem solid rgba(0, 0, 0, 0.24);;
+  border-bottom: 3rem solid rgba(0, 0, 0, 0.24);;
+}
+
+
+#chat-textinput-container{
+  display: flex;
+  padding: 1rem 0;
+  box-shadow: 0 -1px 1px 0 white;
+}
+
+#chat-textinput{
+  background-color:#2b2a335e ;
+  border-radius: 20px;
+  width: 96.5%;
+  min-width: 22rem;
+  margin: auto 1rem;
+  resize: none;
+  color: white;
+}
+
+
+#send-message-icon{
+ position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 40%;
+  vertical-align: middle;
+  margin: auto 1rem auto auto;
+}
