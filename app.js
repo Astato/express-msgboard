@@ -5,8 +5,6 @@ var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 
 const indexRouter = require("./routes/index");
-const users = require("./routes/users");
-
 var app = express();
 
 app.set("views", path.join(__dirname, "views"));

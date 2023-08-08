@@ -1,7 +1,6 @@
 var express = require("express");
 var router = express.Router();
 const os = require("os");
-const chatsData = require("../chats.json");
 const { readFile, writeFile } = require("fs");
 
 const user = os.userInfo();
