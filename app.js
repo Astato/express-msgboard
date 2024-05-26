@@ -3,9 +3,30 @@ var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
+const mongoose = require("mongoose");
+const session = require("express-session");
+const passport = require("passport");
+const flash = require("connect-flash");
 
+const loginRouter = require("./routes/login");
 const indexRouter = require("./routes/index");
+const signupRouter = require("./routes/singup");
+const passwordRouter = require("./routes/passrecovery");
+const profileRouter = require("./routes/profile");
 var app = express();
+
+mongoose.set("strictQuery", false);
+const mongoDB =
+  "mongodb+srv://admin:Eb9QbnX6BprGbOMP@cluster0.odvbyac.mongodb.net/chats?retryWrites=true&w=majority";
+
+const main = async () => {
+  await mongoose.connect(mongoDB);
+};
+
+main().catch((err) => console.log(err));
+mongoose.connection.on("open", () => {
+  console.log("Connected to DB");
+});
 
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
@@ -15,8 +36,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
-
+app.use(
+  session({
+    secret: "this-isa-random-string",
+    resave: false,
+    saveUninitialized: true,
+  })
+);
+app.use(flash());
+app.use(passport.initialize());
+app.use(passport.session());
 app.use("/", indexRouter);
+app.use("/sign-in", loginRouter);
+app.use("/sign-up", signupRouter);
+app.use("/password-recovery", passwordRouter);
+app.use("/profile", profileRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

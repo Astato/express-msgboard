@@ -1,37 +1,212 @@
 #!/usr/bin/env node
 
-/**
- * Module dependencies.
- */
-
-var app = require("../app");
-var debug = require("debug")("express-msgboard:server");
-var http = require("http");
-
-/**
- * Get port from environment and store in Express.
- */
-
-var port = normalizePort(process.env.PORT || "3000");
+const app = require("../app");
+const debug = require("debug")("express-msgboard:server");
+const http = require("http");
+const socket = require("../socketSetup");
+// const { createClient } = require("redis");
+const saveChats = require("../controllers/writeDB");
+const port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
 
-/**
- * Create HTTP server.
- */
+const server = http.createServer(app);
+const io = socket.init(server);
+const connectedUsers = {};
+let globalMessagesArray = [];
+let privateMessagesArray = {};
 
-var server = http.createServer(app);
+async function saveToDB(global, messages, issuer, target) {
+  try {
+    if (global) {
+      await saveChats(messages);
+    } else {
+      await saveChats(messages, issuer, target);
+    }
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+}
 
-/**
- * Listen on provided port, on all network interfaces.
- */
+io.on("connection", (socket) => {
+  console.log("User connected");
+
+  socket.on("User Connected", (username) => {
+    connectedUsers[username] = socket.id;
+    console.log(connectedUsers);
+    io.emit("Users List", connectedUsers);
+    if (globalMessagesArray.length > 0) {
+      io.to(socket.id).emit("Append Unsaved Messages", globalMessagesArray);
+    }
+  });
+
+  socket.on("Disconnect Request", (chatkeys) => {
+    const pushToDB = chatkeys.map(async (chatkey) => {
+      if (privateMessagesArray[chatkey]) {
+        const array = chatkey.split("-");
+        const user0 = array[0];
+        const user1 = array[1];
+        console.log(privateMessagesArray[chatkey]);
+        await saveChats(privateMessagesArray[chatkey], user0, user1);
+        delete privateMessagesArray[chatkey];
+      } else {
+        return;
+      }
+    });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("USER DISCONNECTED");
+
+    for (const element of Object.keys(connectedUsers)) {
+      if (connectedUsers[element] === socket.id) {
+        delete connectedUsers[element];
+      }
+    }
+    //// if no one is online and there are unsaved messages, save all global messages to db;
+    if (
+      Object.keys(connectedUsers).length === 0 &&
+      globalMessagesArray.length > 0
+    ) {
+      saveToDB(globalMessagesArray);
+      globalMessagesArray = [];
+      return console.log("push to db");
+    } else {
+    }
+    io.emit("Users List", connectedUsers);
+  });
+
+  socket.on("Selected Chat", (target, issuer) => {
+    for (const user of Object.entries(connectedUsers)) {
+      if (user[0] === target) {
+        const targetSocketID = user[1];
+        console.log(targetSocketID, "TARGET SOCKET ID");
+        if (privateMessagesArray[target + "-" + issuer]) {
+          socket.emit("Friend Selected", targetSocketID);
+          socket.emit(
+            "Append Unsaved Messages",
+            privateMessagesArray[target + "-" + issuer]
+          );
+        } else if (privateMessagesArray[issuer + "-" + target]) {
+          socket.emit("Friend Selected", targetSocketID);
+          socket.emit(
+            "Append Unsaved Messages",
+            privateMessagesArray[issuer + "-" + target]
+          );
+        } else {
+          return socket.emit("Friend Selected", targetSocketID);
+        }
+      }
+    }
+  });
+
+  socket.on("Select Global", () => {
+    if (globalMessagesArray.length > 0) {
+      io.to(socket.id).emit("Append Unsaved Messages", globalMessagesArray);
+    }
+  });
+
+  function emitPrivateMessageEvent(
+    event,
+    message,
+    targetSocket,
+    chatkey,
+    issuer,
+    target //// if target is offline save directly to db
+  ) {
+    if (targetSocket) {
+      socket.emit(event, message, chatkey, issuer);
+      socket.to(targetSocket).emit(event, message, chatkey, issuer);
+      socket.to(targetSocket).emit("Play Sound");
+    } else {
+      saveToDB(false, [message], issuer, target);
+      socket.emit(event, message, chatkey, issuer);
+    }
+    return;
+  }
+
+  socket.on("Private Message", (issuer, target, message, targetSocketID) => {
+    const chatKey0 = issuer + "-" + target;
+    const chatKey1 = target + "-" + issuer;
+    console.log(targetSocketID, "TARGET SOCKET ID");
+    if (!targetSocketID) {
+      return emitPrivateMessageEvent(
+        "Private Message",
+        message,
+        false,
+        chatKey0,
+        issuer,
+        target
+      );
+    }
+
+    if (
+      privateMessagesArray[chatKey0] &&
+      privateMessagesArray[chatKey0].length >= 20
+    ) {
+      const spliceArray = privateMessagesArray[chatKey0].splice(
+        0,
+        privateMessagesArray[chatKey0] / 2
+      );
+      pushToDB(false, spliceArray, issuer, target);
+    } else if (
+      privateMessagesArray[chatKey1] &&
+      privateMessagesArray[chatKey1].length >= 20
+    ) {
+      const spliceArray = privateMessagesArray[chatKey1].splice(
+        0,
+        privateMessagesArray[chatKey1] / 2
+      );
+      pushToDB(false, spliceArray, issuer, target);
+    }
+
+    if (privateMessagesArray[chatKey0]) {
+      privateMessagesArray[chatKey0].push(message);
+      return emitPrivateMessageEvent(
+        "Private Message",
+        message,
+        targetSocketID,
+        chatKey0,
+        issuer
+      );
+    } else if (privateMessagesArray[chatKey1]) {
+      privateMessagesArray[chatKey1].push(message);
+      return emitPrivateMessageEvent(
+        "Private Message",
+        message,
+        targetSocketID,
+        chatKey1,
+        issuer
+      );
+    } else {
+      privateMessagesArray[chatKey0] = [message];
+      return emitPrivateMessageEvent(
+        "Private Message",
+        message,
+        targetSocketID,
+        chatKey0,
+        issuer
+      );
+    }
+  });
+
+  socket.on("New Message", (message) => {
+    globalMessagesArray.push(message);
+    if (globalMessagesArray.length >= 30) {
+      const pushToDB = globalMessagesArray.splice(
+        0,
+        globalMessagesArray.length / 2
+      );
+      saveToDB(true, pushToDB);
+    }
+    io.emit("New Message", message);
+    socket.broadcast.emit("Play Sound");
+  });
+});
 
 server.listen(port);
 server.on("error", onError);
 server.on("listening", onListening);
-
-/**
- * Normalize a port into a number, string, or false.
- */
 
 function normalizePort(val) {
   var port = parseInt(val, 10);
