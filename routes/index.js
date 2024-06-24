@@ -18,8 +18,8 @@ router.get("/", async function (req, res, next) {
         chatsbubbles: chats,
         username: req.user.username,
         friends: req.user.friends,
-        unreadTarget: privateChats[0].unreadTarget,
-        unreadCount: privateChats[0].unreadCount,
+        unreadTarget: privateChats[0]?.unreadTarget,
+        unreadCount: privateChats[0]?.unreadCount,
         settings: req.user.settings[0],
       });
     } catch (error) {
